@@ -1,0 +1,49 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: quay.io/fenicsproject/stable:latest
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: sudo pip3 install flake8 pytest --upgrade
+      - run:
+          name: Install dolfin_dg
+          command: |
+            git clone https://bitbucket.org/nate-sime/dolfin_dg.git
+            cd dolfin_dg
+            sudo python3 setup.py install
+      - run:
+          name: Install and compile leopart
+          command: |
+            git clone https://bitbucket.org/jakob_maljaars/leopart.git
+            cd leopart/source/cpp && cmake . && make -j2
+            echo $(pwd)
+            cd ../.. && sudo python3 setup.py install
+      - run:
+          name: Flake8 on source
+          command: |
+            python3 -m flake8 geopart/
+      - run:
+          name: Flake8 on unit tests
+          command: |
+            python3 -m flake8 test/unit/
+      - run:
+          name: Flake8 on demos
+          command: |
+            python3 -m flake8 demo/
+      - run:
+          name: Installing GeoPart
+          command: |
+            sudo python3 setup.py install
+      - run:
+          name: Running unit tests (serial)
+          command: |
+            cd test/unit
+            python3 -m pytest -v -s test*.py
+      - run:
+          name: Running unit tests (MPI)
+          command: |
+            cd test/unit
+            mpirun -n 3 python3 -m pytest -v -s test*.py
